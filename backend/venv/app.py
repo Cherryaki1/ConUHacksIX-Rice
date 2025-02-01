@@ -1,30 +1,57 @@
+import torch
 from flask import Flask, request, jsonify
-import tweepy
+from flask_cors import CORS
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
+
+model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
+model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
+model.eval()  # Set model to evaluation mode
+
+"""DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3):
+This line loads the DistilBERT model with the uncased configuration. It prepares the model for text classification with 3 possible output classes (e.g., emotions: Sad, Neutral, Happy).
+
+model.load_state_dict(torch.load("model.pth")):
+This loads the trained model weights from the file model.pth. Since you've already trained the model in Google Colab, you need to load the saved .pth file to use those trained parameters in your Flask app."""
+
+# Initialize DistilBERT tokenizer
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+
+# Initialize Flask app
 app = Flask(__name__)
+CORS(app)
 
-# Twitter API credentials
-API_KEY = "your_api_key"
-API_SECRET = "your_api_secret"
-ACCESS_TOKEN = "your_access_token"
-ACCESS_SECRET = "your_access_secret"
-BEARER_TOKEN = "your_bearer_token"
+# Function to map model output to emotion
+def map_output_to_emotion(output):
+    if output == 0:
+        return "Sad"
+    elif output == 2:
+        return "Neutral"
+    elif output == 4:
+        return "Happy"
+    else:
+        return "Unknown"
 
-# Authenticate with Twitter API
-client = tweepy.Client(bearer_token=BEARER_TOKEN)
+@app.route("/predict", methods=["POST"])
+def predict():
+    # Get the input text directly from the POST request (as a string)
+    text = request.form['text']  # Assuming text is sent as form data
 
-@app.route('/search', methods=['GET'])
-def search_tweets():
-    query = request.args.get('q')  # Get search query from request
-    if not query:
-        return jsonify({"error": "Please provide a query parameter"}), 400
-    
-    # Search recent tweets (adjust max_results as needed)
-    response = client.search_recent_tweets(query=query, max_results=5)
-    
-    tweets = [{"text": tweet.text, "id": tweet.id} for tweet in response.data] if response.data else []
-    
-    return jsonify(tweets)
+    # Tokenize 
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
-if __name__ == '__main__':
+    # Run the model to get the logits (predictions)
+    with torch.no_grad():
+        logits = model(**inputs).logits  # Get the raw prediction logits
+
+    # Get the predicted class (the class with the highest logit)
+    predicted_class = torch.argmax(logits, dim=1).item()
+
+    # Map the predicted class to the corresponding emotion
+    emotion = map_output_to_emotion(predicted_class)
+
+    # Return the result as a JSON response
+    return jsonify({"emotion": emotion})
+
+if __name__ == "__main__":
     app.run(debug=True)

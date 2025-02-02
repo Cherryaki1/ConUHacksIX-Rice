@@ -90,31 +90,6 @@ def scrape_tweets(query, max_tweets=100):
     driver.quit()
     return tweets_data
 
-@app.route('/search', methods=['GET'])
-def search():
-    query = request.args.get('query')
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
-    
-    tweets = scrape_tweets(query)
-    return jsonify({"query": query, "tweets": tweets})
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-@app.route('/sentiment-stats', methods=['POST'])
-def sentiment_stats():
-    data = request.json  # Expecting a list of tweet sentiments
-    sentiments = np.array(data["sentiments"])  # ["positive", "negative", "neutral", ...]
-
-    total = len(sentiments)
-    stats = {
-        "positive": np.sum(sentiments == "positive") / total * 100,
-        "negative": np.sum(sentiments == "negative") / total * 100,
-        "neutral": np.sum(sentiments == "neutral") / total * 100
-    }
-
-    return jsonify(stats)
 
 # Function to map model output to emotion
 def map_output_to_emotion(output):

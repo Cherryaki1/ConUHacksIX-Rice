@@ -78,12 +78,13 @@ const Home: React.FC = () => {
       <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-2 transition-all duration-500">
 
         {/* Search + Analyze */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 flex items-center space-x-2 p-4 mt-4">
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 flex items-center p-4 mt-4">
           {/* Search Box */}
           <div className="relative my-4 transition-all">
             <input
               type="text"
-              className="block w-[40em] py-2 px-0 pl-2 text-sm text-white bg-stone-200 border-0 border-b-2 border-gray-300 appearance-none dark:focus:border-emerald-500 focus:outline-none focus:ring-0 focus:text-white focus:border-emerald-600 peer rounded-l-lg bg-opacity-25"              placeholder=""
+              className="block w-[40em] h-11 py-2 px-0 pl-2 text-sm text-white bg-stone-200 border-stone-200 focus:border-1 appearance-none dark:focus:border-emerald-500 focus:outline-none focus:ring-0 focus:text-white focus:border-emerald-600 peer rounded-l-lg bg-opacity-25"              
+              placeholder=""
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -95,7 +96,7 @@ const Home: React.FC = () => {
             </label>
           </div>{" "}
             
-          <button className="px-3 border-emerald-600 h-9 rounded-r-lg bg-emerald-600 text-white hover:bg-white hover:text-emerald-600 duration-300"
+          <button className="px-3 border-emerald-600 h-11 rounded-r-lg bg-emerald-600 text-white hover:bg-white hover:text-emerald-600 duration-300"
             onClick={fetchTweets}
           >
             Analyze

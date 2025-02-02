@@ -1,8 +1,16 @@
 import { useState, useEffect } from "react";
 
-const tweetList = [{'tweet': 'Philly Plane Crash Crater\n\nYou Decide..... Plane or Missile ....\n\n#planecrash #phillyplanecrash', 'username': 'Culture War', 'timestamp': '2025-02-01T15:42:52.000Z'}, {'tweet': 'Bring back saying grace in public', 'username': 'The War on Beauty', 'timestamp': '2025-01-30T17:23:36.000Z'}];
+interface Tweet {
+  tweet: string;
+  username: string;
+  timestamp: string;
+}
 
-export default function TweetCard({ tweet }) {
+interface TweetCardProps {
+  tweet: Tweet;
+}
+
+const TweetCard: React.FC<TweetCardProps> = ({ tweet }) => {
   return (
     <div className="w-80 bg-black text-white p-5 rounded-xl shadow-md flex-shrink-0">
       <div className="flex items-center gap-4">
@@ -22,6 +30,9 @@ export default function TweetCard({ tweet }) {
   );
 }
 
+export default TweetCard;
+
+/*
 export function TweetFeed({ tweets }) {
   const [tweetList, setTweetList] = useState([]);
 
@@ -36,4 +47,4 @@ export function TweetFeed({ tweets }) {
       ))}
     </div>
   );
-}
+}*/

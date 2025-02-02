@@ -1,6 +1,5 @@
 "use client";
-import React, { useState } from "react";
-import DonutChart from "./DonutChart";
+import React, { useEffect, useState } from "react";
 import TweetCard from "./TweetCard";
 import axios from "axios";
 
@@ -12,20 +11,14 @@ interface Tweet {
   sentiment: 0 | 2 | 4; // Add sentiment field
 }
 
-// Define the structure of chart data
-interface ChartData {
-  label: string;
-  value: number;
-  color: string;
-}
-
 const Home: React.FC = () => {
-  const [chartData, setChartData] = useState<ChartData[]>([]);
   const [tweetList, setTweetList] = useState<Tweet[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
   const fetchTweets = async () => {
+    setTweetList([]); // Hide old tweets
+    setGeneratedText(""); // Hide old generated text
     setLoading(true); // Start loading animation
 
     try {
@@ -41,6 +34,38 @@ const Home: React.FC = () => {
     setLoading(false); // Stop loading animation
   };
 
+  const fetchGeneratedResponse = async (tweets: Tweet[]) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tweets }),
+      });
+
+      const data = await response.json();
+      console.log("Generated Response:", data.generated_text);
+      return data.generated_text;
+    } catch (error) {
+      console.error("Error fetching generated response:", error);
+    }
+  };
+
+  const [generatedText, setGeneratedText] = useState("Generating...");
+
+  useEffect(() => {
+    const generateText = async () => {
+      if (tweetList.length > 0) {
+        const response = await fetchGeneratedResponse(tweetList);
+        setGeneratedText(response);
+      } else {
+        setGeneratedText("Generating...");
+      }
+    };
+
+    generateText();
+  }, [tweetList]); // Run when tweetList updates
   /*const processTweetsForChart = (tweets: Tweet[]): ChartData[] => {
     // Example processing: count occurrences of each username
     const counts = tweets.reduce<Record<string, number>>((acc, tweet) => {
@@ -55,17 +80,8 @@ const Home: React.FC = () => {
     }));
   };*/
 
-  const getRandomColor = (): string => {
-    const letters = "0123456789ABCDEF";
-    let color = "#";
-    for (let i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
-    }
-    return color;
-  };
-
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-black">
+    <div className="relative h-screen w-screen overflow-hidden bg-black flex flex-col justify-between">
       {/* Background Video */}
       <video
         autoPlay
@@ -83,10 +99,10 @@ const Home: React.FC = () => {
         className="absolute -top-6 left-4 m-4 w-40 h-40"
       />
 
-      {/* Page content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-2 transition-all duration-500">
+      {/* Page Content */}
+      <div className="relative z-10 flex flex-col items-center justify-start h-full space-y-6 transition-all duration-500 pt-20 pb-40">
         {/* Search + Analyze */}
-        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 flex items-center p-4 mt-4">
+        <div className="flex items-center p-4 -mt-16">
           {/* Search Box */}
           <div className="relative my-4 transition-all">
             <input
@@ -97,17 +113,16 @@ const Home: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <label
-  htmlFor="ID"
-  className={`absolute left-1/2 transform -translate-x-1/2 text-sm text-white duration-300 
-  -translate-y-8 scale-100 top-3 -z-10 origin-[0] peer-focus:text-sky-500 
-  peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 
-  peer-focus:scale-110 peer-focus:-translate-y-8
-  ${loading ? "animate-pulse text-sky-300" : ""}`}
->
-  {loading ? "Loading..." : "Search Key Word"}
-</label>
-
-          </div>{" "}
+              htmlFor="ID"
+              className={`absolute left-1/2 transform -translate-x-1/2 text-sm text-white duration-300 
+          -translate-y-8 scale-100 top-3 -z-10 origin-[0] peer-focus:text-sky-500 
+          peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 
+          peer-focus:scale-110 peer-focus:-translate-y-8
+          ${loading ? "animate-pulse text-sky-300" : ""}`}
+            >
+              {loading ? "Loading..." : "Search Key Word"}
+            </label>
+          </div>
           <button
             className="px-3 border-sky-500 h-11 rounded-r-lg bg-sky-500 text-white hover:bg-white hover:text-sky-600 duration-300 flex items-center justify-center w-24"
             onClick={fetchTweets}
@@ -140,9 +155,15 @@ const Home: React.FC = () => {
           </button>
         </div>
 
-        {chartData.length > 0 && <DonutChart data={chartData} size={200} />}
+        {/* Generated Text (Only displayed if there are tweets) */}
+        {tweetList.length > 0 && (
+          <div className="text-md text-white text-center bg-black bg-opacity-50 w-[55em] h-[15em] p-4 rounded-xl shadow-md overflow-y-auto">
+            {generatedText}
+          </div>
+        )}
 
-        <div className="opacity-[.80] absolute bottom-0 left-4 w-full overflow-x-auto gap-4 p-4 max-w-full snap-x snap-mandatory scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent flex">
+        {/* Tweet Cards Container */}
+        <div className="opacity-[.80] absolute bottom-4 left-4 w-full overflow-x-auto gap-4 p-4 max-w-full snap-x snap-mandatory scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent flex">
           {tweetList.map((tweet, index) => (
             <div key={index} className="snap-start">
               <TweetCard tweet={tweet} />

@@ -10,10 +10,23 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import google.generativeai as genai
 import time
 import numpy as np
+import os
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if not GOOGLE_API_KEY:
+    raise ValueError("Missing GOOGLE_API_KEY in environment variables")
+
+import google.generativeai as genai
+genai.configure(api_key=GOOGLE_API_KEY)
 
 # model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
 # model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
@@ -44,6 +57,36 @@ model_state_dict = checkpoint['model_state_dict']
 model.load_state_dict(model_state_dict)
 
 model.eval()
+
+def generate_response_from_tweets(tweets):
+    model = genai.GenerativeModel(
+    "gemini-pro",
+    generation_config={
+        "max_output_tokens": 20,  # ~50 words
+        "temperature": 0.8,  # Adjust creativity
+        "top_p": 0.9,
+    }
+    )
+    
+    # Format the input for Gemini
+    tweet_texts = "\n".join([f"- {tweet['tweet']}" for tweet in tweets])
+    prompt = f"Make sure your response is in less than 30 words: Based on the following tweets and their sentiment analysis, provide key insights on business, politics, finances or other relevant news. Offer mental health references for the poster if there are negative mental health sentiments. \n\n{tweet_texts}"
+
+    # Generate response
+    response = model.generate_content(prompt)
+    
+    return response.text
+
+@app.route('/generate', methods=['POST'])
+def generate():
+    data = request.json
+    tweets = data.get('tweets', [])
+
+    if not tweets:
+        return jsonify({"error": "No tweets provided"}), 400
+
+    generated_text = generate_response_from_tweets(tweets)
+    return jsonify({"generated_text": generated_text})
 
 # Function to scrape tweets
 def scrape_tweets(query, max_tweets=10):
@@ -102,6 +145,18 @@ def scrape_tweets(query, max_tweets=10):
     driver.quit()
     return tweets_data
 
+
+def generate_response_from_tweets(tweets):
+    model = genai.GenerativeModel("gemini-pro")
+    
+    # Format the input for Gemini
+    tweet_texts = "\n".join([f"- {tweet['tweet']} (Sentiment: {tweet['sentiment']})" for tweet in tweets])
+    prompt = f"Based on the following tweets and their sentiment analysis, generate an insightful summary or response:\n\n{tweet_texts}"
+
+    # Generate response
+    response = model.generate_content(prompt)
+    
+    return response.text
 # Function to get tweet from dictionary
 def get_tweet(data):
     return data.get("tweet", "No tweet found")

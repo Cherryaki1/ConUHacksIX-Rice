@@ -1,6 +1,7 @@
 import torch
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -25,12 +26,24 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 # This loads the trained model weights from the file model.pth. Since you've already trained the model in Google Colab, you need to load the saved .pth file to use those trained parameters in your Flask app."""
 
 # # Initialize DistilBERT tokenizer
-# tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+# tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')git
 
 # Initialize Flask app
 app = Flask(__name__)
 
 CORS(app)  # Allow frontend to make requests
+
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3)
+
+checkpoint = torch.load("model_checkpoint500k.pth", map_location=torch.device('cpu'))
+
+# Load the state dictionary
+model_state_dict = checkpoint['model_state_dict']
+
+model.load_state_dict(model_state_dict)
+
+model.eval()
 
 # Function to scrape tweets
 def scrape_tweets(query, max_tweets=10):
@@ -93,17 +106,19 @@ def scrape_tweets(query, max_tweets=10):
 def get_tweet(data):
     return data.get("tweet", "No tweet found")
 
+class_mapping = {0:0, 1:2, 2:4};  # Mapping from DistilBERT classes to original classes
+
 # Function that takes a tweet and returns the predicted class
 def predict(text):
     # Tokenize 
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=50)
 
     # Run the model to get the logits (predictions)
     with torch.no_grad():
         logits = model(**inputs).logits  # Get the raw prediction logits
 
     # Get the predicted class (the class with the highest logit)
-    predicted_class = torch.argmax(logits, dim=1).item()
+    predicted_class = class_mapping[torch.argmax(logits, dim=1).item()];
 
     # Return the predicted class (0, 2, or 4)
     return predicted_class
@@ -114,12 +129,12 @@ def search():
     
     # list of dictionaries with tweet, username, and timestamp keys
     tweets = scrape_tweets(query)
-    # predictions = process_tweets(tweets)
-    # results = count_values(predictions) # dictionary with counts of each class
+    predictions = process_tweets(tweets)
+    results = count_values(predictions) # dictionary with counts of each class
     # # Add sentiment to the tweets
-    # tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
-    
-    return jsonify({"query": query, "tweets": tweets})
+    tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
+    print(tweets_with_sentiment)
+    return jsonify({"results": results, "tweets": tweets_with_sentiment})
 
 def process_tweets(tweets):
     predictions = []
@@ -137,7 +152,7 @@ def count_values(lst):
 def add_sentiment_to_tweets(tweets):
     for tweet_data in tweets:
         tweet = get_tweet(tweet_data)  # Extract the tweet text
-        sentiment = predict(tweet)     # Predict the sentiment
+        sentiment = predict(tweet)  # Predict the sentiment
         tweet_data['sentiment'] = sentiment  # Add sentiment to the dictionary
     return tweets
 

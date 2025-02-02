@@ -14,19 +14,18 @@ import numpy as np
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
 
+# model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
+# model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
+# model.eval()  # Set model to evaluation mode
 
-model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
-model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
-model.eval()  # Set model to evaluation mode
+# """DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3):
+# This line loads the DistilBERT model with the uncased configuration. It prepares the model for text classification with 3 possible output classes (e.g., emotions: Sad, Neutral, Happy).
 
-"""DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3):
-This line loads the DistilBERT model with the uncased configuration. It prepares the model for text classification with 3 possible output classes (e.g., emotions: Sad, Neutral, Happy).
+# model.load_state_dict(torch.load("model.pth")):
+# This loads the trained model weights from the file model.pth. Since you've already trained the model in Google Colab, you need to load the saved .pth file to use those trained parameters in your Flask app."""
 
-model.load_state_dict(torch.load("model.pth")):
-This loads the trained model weights from the file model.pth. Since you've already trained the model in Google Colab, you need to load the saved .pth file to use those trained parameters in your Flask app."""
-
-# Initialize DistilBERT tokenizer
-tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+# # Initialize DistilBERT tokenizer
+# tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -90,16 +89,60 @@ def scrape_tweets(query, max_tweets=100):
     driver.quit()
     return tweets_data
 
+# Function to get tweet from dictionary
+def get_tweet(data):
+    return data.get("tweet", "No tweet found")
+
+# Function that takes a tweet and returns the predicted class
+def predict(text):
+    # Tokenize 
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+
+    # Run the model to get the logits (predictions)
+    with torch.no_grad():
+        logits = model(**inputs).logits  # Get the raw prediction logits
+
+    # Get the predicted class (the class with the highest logit)
+    predicted_class = torch.argmax(logits, dim=1).item()
+
+    # Return the predicted class (0, 2, or 4)
+    return predicted_class
+
 @app.route('/search', methods=['GET'])
 def search():
-    query = request.args.get('query')
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
+    query = request.args.get('query')  # Retrieves the 'query' parameter from the URL
     
+    # list of dictionaries with tweet, username, and timestamp keys
     tweets = scrape_tweets(query)
-    return jsonify({"query": query, "tweets": tweets})
+    predictions = process_tweets(tweets)
+    results = count_values(predictions) # dictionary with counts of each class
+    # Add sentiment to the tweets
+    tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
+    
+    return jsonify({"results": results, "tweets": tweets_with_sentiment})
 
-if __name__ == '__main__':
+def process_tweets(tweets):
+    predictions = []
+    for tweet_data in tweets:
+        tweet_text = get_tweet(tweet_data)  # Get the tweet text from the dictionary
+        predicted_class = predict(tweet_text)  # Predict the class for the tweet
+        #tweet_data['sentiment'] = predicted_class
+        predictions.append(predicted_class)  # Add the predicted class to the list
+    return predictions
+
+def count_values(lst):
+    counts = {0: lst.count(0), 2: lst.count(2), 4: lst.count(4)}
+    return counts
+
+def add_sentiment_to_tweets(tweets):
+    for tweet_data in tweets:
+        tweet = get_tweet(tweet_data)  # Extract the tweet text
+        sentiment = predict(tweet)     # Predict the sentiment
+        tweet_data['sentiment'] = sentiment  # Add sentiment to the dictionary
+    return tweets
+
+   
+if __name__ == "__main__":
     app.run(debug=True)
 
 @app.route('/sentiment-stats', methods=['POST'])
@@ -127,26 +170,26 @@ def map_output_to_emotion(output):
     else:
         return "Unknown"
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    # Get the input text directly from the POST request (as a string)
-    text = request.form['text']  # Assuming text is sent as form data
+# @app.route("/predict", methods=["POST"])
+# def predict():
+#     # Get the input text directly from the POST request (as a string)
+#     text = request.form['text']  # Assuming text is sent as form data
 
-    # Tokenize 
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+#     # Tokenize 
+#     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
-    # Run the model to get the logits (predictions)
-    with torch.no_grad():
-        logits = model(**inputs).logits  # Get the raw prediction logits
+#     # Run the model to get the logits (predictions)
+#     with torch.no_grad():
+#         logits = model(**inputs).logits  # Get the raw prediction logits
 
-    # Get the predicted class (the class with the highest logit)
-    predicted_class = torch.argmax(logits, dim=1).item()
+#     # Get the predicted class (the class with the highest logit)
+#     predicted_class = torch.argmax(logits, dim=1).item()
 
-    # Map the predicted class to the corresponding emotion
-    emotion = map_output_to_emotion(predicted_class)
+#     # Map the predicted class to the corresponding emotion
+#     emotion = map_output_to_emotion(predicted_class)
 
-    # Return the result as a JSON response
-    return jsonify({"emotion": emotion})
+#     # Return the result as a JSON response
+#     return jsonify({"emotion": emotion})
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -15,9 +15,9 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 
 
 
-model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
-model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
-model.eval()  # Set model to evaluation mode
+# model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
+# model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
+# model.eval()  # Set model to evaluation mode
 
 """DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3):
 This line loads the DistilBERT model with the uncased configuration. It prepares the model for text classification with 3 possible output classes (e.g., emotions: Sad, Neutral, Happy).
@@ -90,23 +90,15 @@ def scrape_tweets(query, max_tweets=100):
     driver.quit()
     return tweets_data
 
+# list of dictionaries with tweet, username, and timestamp keys
+tweets = scrape_tweets("****VARIABLE****") 
 
-# Function to map model output to emotion
-def map_output_to_emotion(output):
-    if output == 0:
-        return "Sad"
-    elif output == 2:
-        return "Neutral"
-    elif output == 4:
-        return "Happy"
-    else:
-        return "Unknown"
+# Function to get tweet from dictionary
+def get_tweet(data):
+    return data.get("tweet", "No tweet found")
 
-@app.route("/predict", methods=["POST"])
-def predict():
-    # Get the input text directly from the POST request (as a string)
-    text = request.form['text']  # Assuming text is sent as form data
-
+# Function that takes a tweet and returns the predicted class
+def predict(text):
     # Tokenize 
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
@@ -117,11 +109,19 @@ def predict():
     # Get the predicted class (the class with the highest logit)
     predicted_class = torch.argmax(logits, dim=1).item()
 
-    # Map the predicted class to the corresponding emotion
-    emotion = map_output_to_emotion(predicted_class)
+    # Return the predicted class (0, 2, or 4)
+    return predicted_class
 
-    # Return the result as a JSON response
-    return jsonify({"emotion": emotion})
+# GET statement to get the query
+@app.route('/search', methods=['GET'])
+def search():
+    query = request.args.get('query')  # Retrieves the 'query' parameter from the URL
+    if query:
+        # Process the query as needed
+        return f"Received query: {query}"
+    else:
+        return "No query parameter provided.", 400
+    
 
 if __name__ == "__main__":
     app.run(debug=True)

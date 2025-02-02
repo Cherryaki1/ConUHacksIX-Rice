@@ -33,7 +33,7 @@ app = Flask(__name__)
 CORS(app)  # Allow frontend to make requests
 
 # Function to scrape tweets
-def scrape_tweets(query, max_tweets=100):
+def scrape_tweets(query, max_tweets=10):
     options = Options()
     options.debugger_address = "localhost:9222"
     options.add_argument("--headless=new")  # Run in headless mode (remove this if you want to see the browser)
@@ -114,12 +114,12 @@ def search():
     
     # list of dictionaries with tweet, username, and timestamp keys
     tweets = scrape_tweets(query)
-    predictions = process_tweets(tweets)
-    results = count_values(predictions) # dictionary with counts of each class
-    # Add sentiment to the tweets
-    tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
+    # predictions = process_tweets(tweets)
+    # results = count_values(predictions) # dictionary with counts of each class
+    # # Add sentiment to the tweets
+    # tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
     
-    return jsonify({"results": results, "tweets": tweets_with_sentiment})
+    return jsonify({"query": query, "tweets": tweets})
 
 def process_tweets(tweets):
     predictions = []
@@ -143,7 +143,7 @@ def add_sentiment_to_tweets(tweets):
 
    
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=True)
 
 @app.route('/sentiment-stats', methods=['POST'])
 def sentiment_stats():
@@ -190,6 +190,3 @@ def map_output_to_emotion(output):
 
 #     # Return the result as a JSON response
 #     return jsonify({"emotion": emotion})
-
-if __name__ == "__main__":
-    app.run(debug=True)

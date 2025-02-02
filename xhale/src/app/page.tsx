@@ -25,19 +25,19 @@ const Home: React.FC = () => {
 
   const fetchTweets = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/search?query=${searchQuery}`);
+      const response = await axios.get(`http://127.0.0.1:5000/search?query=${searchQuery}`);
       const tweets: Tweet[] = response.data.tweets;
 
       // Process tweets to generate chart data
-      const processedChartData = processTweetsForChart(tweets);
-      setChartData(processedChartData);
+      //const processedChartData = processTweetsForChart(tweets);
+      //setChartData(processedChartData);
       setTweetList(tweets);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
-  const processTweetsForChart = (tweets: Tweet[]): ChartData[] => {
+  /*const processTweetsForChart = (tweets: Tweet[]): ChartData[] => {
     // Example processing: count occurrences of each username
     const counts = tweets.reduce<Record<string, number>>((acc, tweet) => {
       acc[tweet.username] = (acc[tweet.username] || 0) + 1;
@@ -49,7 +49,7 @@ const Home: React.FC = () => {
       value,
       color: getRandomColor(),
     }));
-  };
+  };*/
 
   const getRandomColor = (): string => {
     const letters = '0123456789ABCDEF';

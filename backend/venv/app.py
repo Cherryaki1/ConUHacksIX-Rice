@@ -2,6 +2,7 @@ import torch
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+from collections import Counter
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -15,9 +16,9 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 
 
 
-# model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
-# model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
-# model.eval()  # Set model to evaluation mode
+model = DistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=3)
+model.load_state_dict(torch.load("model.pth"))  # our model file name neets to be inserted here
+model.eval()  # Set model to evaluation mode
 
 """DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=3):
 This line loads the DistilBERT model with the uncased configuration. It prepares the model for text classification with 3 possible output classes (e.g., emotions: Sad, Neutral, Happy).
@@ -90,9 +91,6 @@ def scrape_tweets(query, max_tweets=100):
     driver.quit()
     return tweets_data
 
-# list of dictionaries with tweet, username, and timestamp keys
-tweets = scrape_tweets("****VARIABLE****") 
-
 # Function to get tweet from dictionary
 def get_tweet(data):
     return data.get("tweet", "No tweet found")
@@ -116,12 +114,39 @@ def predict(text):
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query')  # Retrieves the 'query' parameter from the URL
-    if query:
-        # Process the query as needed
-        return f"Received query: {query}"
-    else:
-        return "No query parameter provided.", 400
+    return query
+
+query = search()
     
+def process_tweets(tweets):
+    predictions = []
+    for tweet_data in tweets:
+        tweet_text = get_tweet(tweet_data)  # Get the tweet text from the dictionary
+        predicted_class = predict(tweet_text)  # Predict the class for the tweet
+        #tweet_data['sentiment'] = predicted_class
+        predictions.append(predicted_class)  # Add the predicted class to the list
+    return predictions
+
+# list of dictionaries with tweet, username, and timestamp keys
+tweets = scrape_tweets(query)
+# list of predicted classes (0, 2, or 4)
+predictions = process_tweets(tweets)
+
+def count_values(lst):
+    counts = {0: lst.count(0), 2: lst.count(2), 4: lst.count(4)}
+    return counts
+
+results = count_values(predictions) # dictionary with counts of each class
+
+def add_sentiment_to_tweets(tweets):
+    for tweet_data in tweets:
+        tweet = get_tweet(tweet_data)  # Extract the tweet text
+        sentiment = predict(tweet)     # Predict the sentiment
+        tweet_data['sentiment'] = sentiment  # Add sentiment to the dictionary
+    return tweets
+
+# Add sentiment to the tweets
+tweets_with_sentiment = add_sentiment_to_tweets(tweets) # List of dictionaries with tweet, username, timestamp, and sentiment keys
 
 if __name__ == "__main__":
     app.run(debug=True)

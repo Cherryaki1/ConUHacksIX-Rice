@@ -9,6 +9,7 @@ interface Tweet {
   tweet: string;
   username: string;
   timestamp: string;
+  sentiment: 0 | 2 | 4; // Add sentiment field
 }
 
 // Define the structure of chart data

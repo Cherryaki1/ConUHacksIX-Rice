@@ -70,7 +70,7 @@ const Home: React.FC = () => {
         autoPlay
         loop
         muted
-        className="absolute top-0 left-0 w-full h-full object-cover opacity-75 blur-sm"
+        className="absolute top-0 left-0 w-full h-full object-cover opacity-[.55] blur-sm"
       >
         <source src="/background.mp4" type="video/mp4" />
         Your browser does not support the video tag.
@@ -96,11 +96,16 @@ const Home: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <label
-              htmlFor="ID"
-              className="absolute left-1/2 text-sm text-white duration-300 transform -translate-y-8 scale-100 top-3 -z-10 origin-[0] peer-focus:text-sky-500 peer-focus:dark:text-sky-600 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-110 peer-focus:-translate-y-8"
-            >
-              Search Key Word
-            </label>
+  htmlFor="ID"
+  className={`absolute left-1/2 transform -translate-x-1/2 text-sm text-white duration-300 
+  -translate-y-8 scale-100 top-3 -z-10 origin-[0] peer-focus:text-sky-500 
+  peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 
+  peer-focus:scale-110 peer-focus:-translate-y-8
+  ${loading ? "animate-pulse text-sky-300" : ""}`}
+>
+  {loading ? "Loading..." : "Search Key Word"}
+</label>
+
           </div>{" "}
           <button
             className="px-3 border-sky-500 h-11 rounded-r-lg bg-sky-500 text-white hover:bg-white hover:text-sky-600 duration-300 flex items-center justify-center w-24"
@@ -136,7 +141,7 @@ const Home: React.FC = () => {
 
         {chartData.length > 0 && <DonutChart data={chartData} size={200} />}
 
-        <div className="absolute bottom-0 left-4 w-full overflow-x-auto gap-4 p-4 max-w-full snap-x snap-mandatory scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent flex">
+        <div className="opacity-[.80] absolute bottom-0 left-4 w-full overflow-x-auto gap-4 p-4 max-w-full snap-x snap-mandatory scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent flex">
           {tweetList.map((tweet, index) => (
             <div key={index} className="snap-start">
               <TweetCard tweet={tweet} />
